@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="style.css">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 
 <body>
@@ -61,52 +60,75 @@
     <section id="telaCadastro" class="tela">
 
         <div class="barra-tela">
+
             <button class="btn-voltar" onclick="voltarHome()">←</button>
 
             <div>
                 <h2>Cadastrar equipamento</h2>
                 <p>Informe os dados do equipamento</p>
             </div>
+
         </div>
 
 
         <div class="card">
 
             <div class="campo">
+
                 <label>Nome do equipamento *</label>
+
                 <input
                     type="text"
                     id="nome"
                     placeholder="Ex.: Motor Extrusora 01"
                 >
+
             </div>
 
 
             <div class="campo">
+
                 <label>Local de instalação *</label>
+
                 <input
                     type="text"
                     id="local"
                     placeholder="Ex.: Laminador 01"
                 >
+
             </div>
 
 
             <div class="campo">
+
                 <label>Tipo *</label>
 
                 <select id="tipo">
+
                     <option value="">Selecione</option>
-                    <option value="Motor elétrico">Motor elétrico</option>
-                    <option value="Redutor">Redutor</option>
-                    <option value="Outro">Outro</option>
+
+                    <option value="Motor elétrico">
+                        Motor elétrico
+                    </option>
+
+                    <option value="Redutor">
+                        Redutor
+                    </option>
+
+                    <option value="Outro">
+                        Outro
+                    </option>
+
                 </select>
+
             </div>
 
         </div>
 
 
-        <!-- FOTO -->
+        <!-- =========================
+             FOTO DA PLACA
+        ========================== -->
 
         <div class="card">
 
@@ -141,6 +163,7 @@
                 hidden
             >
 
+
             <input
                 type="file"
                 id="fotoGaleria"
@@ -149,7 +172,10 @@
             >
 
 
-            <div id="previewContainer" class="preview-container oculto">
+            <div
+                id="previewContainer"
+                class="preview-container oculto"
+            >
 
                 <img
                     id="previewFoto"
@@ -160,12 +186,17 @@
             </div>
 
 
-            <div id="ocrStatus" class="ocr-status oculto"></div>
+            <div
+                id="ocrStatus"
+                class="ocr-status oculto"
+            ></div>
 
         </div>
 
 
-        <!-- DADOS OCR -->
+        <!-- =========================
+             DADOS ENCONTRADOS
+        ========================== -->
 
         <div class="card">
 
@@ -179,84 +210,152 @@
             <div class="grid">
 
                 <div class="campo">
+
                     <label>Fabricante</label>
-                    <input type="text" id="fabricante">
+
+                    <input
+                        type="text"
+                        id="fabricante"
+                    >
+
                 </div>
 
 
                 <div class="campo">
+
                     <label>Modelo</label>
-                    <input type="text" id="modelo">
+
+                    <input
+                        type="text"
+                        id="modelo"
+                    >
+
                 </div>
 
 
                 <div class="campo">
+
                     <label>Potência (CV)</label>
-                    <input type="number" step="0.01" id="potencia_cv">
+
+                    <input
+                        type="number"
+                        step="0.01"
+                        id="potencia_cv"
+                    >
+
                 </div>
 
 
                 <div class="campo">
+
                     <label>Tensão</label>
-                    <input type="text" id="tensao">
+
+                    <input
+                        type="text"
+                        id="tensao"
+                    >
+
                 </div>
 
 
                 <div class="campo">
+
                     <label>Corrente (A)</label>
-                    <input type="number" step="0.01" id="corrente_a">
+
+                    <input
+                        type="number"
+                        step="0.01"
+                        id="corrente_a"
+                    >
+
                 </div>
 
 
                 <div class="campo">
+
                     <label>Rotação (RPM)</label>
-                    <input type="number" id="rotacao_rpm">
+
+                    <input
+                        type="number"
+                        id="rotacao_rpm"
+                    >
+
                 </div>
 
 
                 <div class="campo">
+
                     <label>Frequência (Hz)</label>
-                    <input type="number" step="0.01" id="frequencia_hz">
+
+                    <input
+                        type="number"
+                        step="0.01"
+                        id="frequencia_hz"
+                    >
+
                 </div>
 
 
                 <div class="campo">
+
                     <label>Número de série</label>
-                    <input type="text" id="numero_serie">
+
+                    <input
+                        type="text"
+                        id="numero_serie"
+                    >
+
                 </div>
 
             </div>
 
 
-            <!-- REDUTOR -->
+            <!-- =========================
+                 REDUTOR
+            ========================== -->
 
-            <div id="camposRedutor" class="redutor-box oculto">
+            <div
+                id="camposRedutor"
+                class="redutor-box oculto"
+            >
 
                 <h3>Dados do redutor</h3>
 
                 <div class="grid">
 
                     <div class="campo">
+
                         <label>Relação</label>
-                        <input type="text" id="relacao">
+
+                        <input
+                            type="text"
+                            id="relacao"
+                        >
+
                     </div>
 
 
                     <div class="campo">
+
                         <label>Rotação entrada (RPM)</label>
+
                         <input
                             type="number"
                             id="rotacao_entrada_rpm"
                         >
+
                     </div>
 
 
                     <div class="campo">
+
                         <label>Rotação saída (RPM)</label>
+
                         <input
                             type="number"
                             id="rotacao_saida_rpm"
                         >
+
                     </div>
 
                 </div>
@@ -378,7 +477,9 @@
         </div>
 
 
-        <!-- VISUALIZAÇÃO -->
+        <!-- =========================
+             MODO VISUALIZAÇÃO
+        ========================== -->
 
         <div id="modoVisualizacao">
 
@@ -387,8 +488,11 @@
                 <div class="detalhe-header">
 
                     <div>
+
                         <h2 id="detNome"></h2>
+
                         <p id="detLocal"></p>
+
                     </div>
 
                     <span
@@ -447,7 +551,11 @@
                         <strong id="detSerie">-</strong>
                     </div>
 
-                    <div id="detRedutorBox" class="detalhes-redutor">
+
+                    <div
+                        id="detRedutorBox"
+                        class="detalhes-redutor"
+                    >
 
                         <span>Relação</span>
                         <strong id="detRelacao">-</strong>
@@ -490,6 +598,8 @@
 
             </div>
 
+
+            <!-- OBSERVAÇÕES -->
 
             <div class="card">
 
@@ -540,21 +650,29 @@
                 <h3>Alterar equipamento</h3>
 
                 <div class="campo">
+
                     <label>Nome</label>
+
                     <input id="editNome">
+
                 </div>
 
 
                 <div class="campo">
+
                     <label>Local de instalação</label>
+
                     <input id="editLocal">
+
                 </div>
 
 
                 <div class="campo">
+
                     <label>Tipo</label>
 
                     <select id="editTipo">
+
                         <option value="Motor elétrico">
                             Motor elétrico
                         </option>
@@ -566,6 +684,7 @@
                         <option value="Outro">
                             Outro
                         </option>
+
                     </select>
 
                 </div>
@@ -580,65 +699,89 @@
                 <div class="grid">
 
                     <div class="campo">
+
                         <label>Fabricante</label>
+
                         <input id="editFabricante">
+
                     </div>
 
 
                     <div class="campo">
+
                         <label>Modelo</label>
+
                         <input id="editModelo">
+
                     </div>
 
 
                     <div class="campo">
+
                         <label>Potência (CV)</label>
+
                         <input
                             type="number"
                             step="0.01"
                             id="editPotencia"
                         >
+
                     </div>
 
 
                     <div class="campo">
+
                         <label>Tensão</label>
+
                         <input id="editTensao">
+
                     </div>
 
 
                     <div class="campo">
+
                         <label>Corrente (A)</label>
+
                         <input
                             type="number"
                             step="0.01"
                             id="editCorrente"
                         >
+
                     </div>
 
 
                     <div class="campo">
+
                         <label>Rotação (RPM)</label>
+
                         <input
                             type="number"
                             id="editRotacao"
                         >
+
                     </div>
 
 
                     <div class="campo">
+
                         <label>Frequência (Hz)</label>
+
                         <input
                             type="number"
                             step="0.01"
                             id="editFrequencia"
                         >
+
                     </div>
 
 
                     <div class="campo">
+
                         <label>Número de série</label>
+
                         <input id="editSerie">
+
                     </div>
 
                 </div>
@@ -654,26 +797,35 @@
                     <div class="grid">
 
                         <div class="campo">
+
                             <label>Relação</label>
+
                             <input id="editRelacao">
+
                         </div>
 
 
                         <div class="campo">
+
                             <label>Rotação entrada</label>
+
                             <input
                                 type="number"
                                 id="editEntrada"
                             >
+
                         </div>
 
 
                         <div class="campo">
+
                             <label>Rotação saída</label>
+
                             <input
                                 type="number"
                                 id="editSaida"
                             >
+
                         </div>
 
                     </div>
@@ -758,7 +910,10 @@
 </main>
 
 
-<div id="mensagem" class="mensagem"></div>
+<div
+    id="mensagem"
+    class="mensagem"
+></div>
 
 
 <script src="app.js"></script>
