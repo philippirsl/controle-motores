@@ -4,8 +4,12 @@
 <head>
     <meta charset="UTF-8">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta name="theme-color" content="#1769aa">
 
     <title>Controle de Equipamentos</title>
 
@@ -16,16 +20,54 @@
 
     <div class="container">
 
-        <header>
+        <!-- CABEÇALHO -->
+
+        <header class="topo">
+
             <h1>🏭 Controle de Equipamentos</h1>
-            <p>Cadastro de motores e redutores</p>
+
+            <p>
+                Cadastro e consulta de motores e redutores
+            </p>
+
         </header>
 
-        <main>
+
+        <!-- MENU -->
+
+        <nav class="menu">
+
+            <button
+                type="button"
+                class="menu-btn ativo"
+                id="btnCadastro"
+            >
+                ➕ Cadastrar
+            </button>
+
+            <button
+                type="button"
+                class="menu-btn"
+                id="btnConsulta"
+            >
+                🔎 Consultar
+            </button>
+
+        </nav>
+
+
+        <!-- ================================================= -->
+        <!-- TELA DE CADASTRO -->
+        <!-- ================================================= -->
+
+        <main id="telaCadastro">
 
             <div class="card">
 
                 <h2>Novo equipamento</h2>
+
+
+                <!-- NOME -->
 
                 <label for="nome">
                     Nome do equipamento
@@ -37,6 +79,9 @@
                     placeholder="Ex.: Motor Extrator Secador 01"
                 >
 
+
+                <!-- LOCAL -->
+
                 <label for="local">
                     Local de instalação
                 </label>
@@ -46,6 +91,9 @@
                     id="local"
                     placeholder="Ex.: Secador"
                 >
+
+
+                <!-- TIPO -->
 
                 <label for="tipo">
                     Tipo
@@ -67,22 +115,74 @@
 
                 </select>
 
-                <label for="foto">
+
+                <!-- FOTO -->
+
+                <label>
                     Foto da placa
                 </label>
 
+
+                <div class="foto-botoes">
+
+                    <button
+                        type="button"
+                        id="btnCamera"
+                        class="foto-button"
+                    >
+                        📷 Tirar foto
+                    </button>
+
+
+                    <button
+                        type="button"
+                        id="btnGaleria"
+                        class="foto-button secundario"
+                    >
+                        🖼️ Escolher da galeria
+                    </button>
+
+                </div>
+
+
+                <!-- INPUT DA CÂMERA -->
+
                 <input
                     type="file"
-                    id="foto"
+                    id="fotoCamera"
                     accept="image/*"
                     capture="environment"
+                    class="camera-input"
                 >
+
+
+                <!-- INPUT DA GALERIA -->
+
+                <input
+                    type="file"
+                    id="fotoGaleria"
+                    accept="image/*"
+                    class="camera-input"
+                >
+
+
+                <!-- PREVIEW -->
 
                 <div id="preview"></div>
 
-                <button id="salvar">
-                    SALVAR EQUIPAMENTO
+
+                <!-- SALVAR -->
+
+                <button
+                    type="button"
+                    id="salvar"
+                    class="salvar-button"
+                >
+                    💾 SALVAR EQUIPAMENTO
                 </button>
+
+
+                <!-- MENSAGEM -->
 
                 <div id="mensagem"></div>
 
@@ -90,9 +190,307 @@
 
         </main>
 
+
+        <!-- ================================================= -->
+        <!-- TELA DE CONSULTA -->
+        <!-- ================================================= -->
+
+        <main
+            id="telaConsulta"
+            class="oculto"
+        >
+
+            <div class="card">
+
+                <h2>
+                    🔎 Equipamentos cadastrados
+                </h2>
+
+
+                <!-- PESQUISA -->
+
+                <input
+                    type="search"
+                    id="pesquisa"
+                    class="campo-pesquisa"
+                    placeholder="Pesquisar por nome ou local..."
+                >
+
+
+                <!-- FILTROS -->
+
+                <div class="filtros">
+
+                    <button
+                        type="button"
+                        class="filtro ativo"
+                        data-tipo="todos"
+                    >
+                        Todos
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="filtro"
+                        data-tipo="motor"
+                    >
+                        Motores
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="filtro"
+                        data-tipo="redutor"
+                    >
+                        Redutores
+                    </button>
+
+                </div>
+
+
+                <!-- LISTA -->
+
+                <div id="listaEquipamentos">
+
+                    <div class="carregando">
+                        Carregando equipamentos...
+                    </div>
+
+                </div>
+
+            </div>
+
+        </main>
+
+
+        <!-- ================================================= -->
+        <!-- TELA DE DETALHES -->
+        <!-- ================================================= -->
+
+        <main
+            id="telaDetalhes"
+            class="oculto"
+        >
+
+            <div class="card">
+
+
+                <button
+                    type="button"
+                    id="voltarConsulta"
+                    class="voltar-button"
+                >
+                    ← Voltar
+                </button>
+
+
+                <h2 id="detalheNome">
+                    Equipamento
+                </h2>
+
+
+                <div class="detalhes">
+
+
+                    <div class="detalhe-item">
+
+                        <span>
+                            Local
+                        </span>
+
+                        <strong id="detalheLocal">
+                            -
+                        </strong>
+
+                    </div>
+
+
+                    <div class="detalhe-item">
+
+                        <span>
+                            Tipo
+                        </span>
+
+                        <strong id="detalheTipo">
+                            -
+                        </strong>
+
+                    </div>
+
+
+                    <div class="detalhe-item">
+
+                        <span>
+                            Fabricante
+                        </span>
+
+                        <strong id="detalheFabricante">
+                            -
+                        </strong>
+
+                    </div>
+
+
+                    <div class="detalhe-item">
+
+                        <span>
+                            Modelo
+                        </span>
+
+                        <strong id="detalheModelo">
+                            -
+                        </strong>
+
+                    </div>
+
+
+                    <div class="detalhe-item">
+
+                        <span>
+                            Potência
+                        </span>
+
+                        <strong id="detalhePotencia">
+                            -
+                        </strong>
+
+                    </div>
+
+
+                    <div class="detalhe-item">
+
+                        <span>
+                            Tensão
+                        </span>
+
+                        <strong id="detalheTensao">
+                            -
+                        </strong>
+
+                    </div>
+
+
+                    <div class="detalhe-item">
+
+                        <span>
+                            Corrente
+                        </span>
+
+                        <strong id="detalheCorrente">
+                            -
+                        </strong>
+
+                    </div>
+
+
+                    <div class="detalhe-item">
+
+                        <span>
+                            Rotação
+                        </span>
+
+                        <strong id="detalheRotacao">
+                            -
+                        </strong>
+
+                    </div>
+
+
+                    <div class="detalhe-item">
+
+                        <span>
+                            Frequência
+                        </span>
+
+                        <strong id="detalheFrequencia">
+                            -
+                        </strong>
+
+                    </div>
+
+
+                    <div class="detalhe-item">
+
+                        <span>
+                            Número de série
+                        </span>
+
+                        <strong id="detalheSerie">
+                            -
+                        </strong>
+
+                    </div>
+
+
+                    <div class="detalhe-item">
+
+                        <span>
+                            Relação
+                        </span>
+
+                        <strong id="detalheRelacao">
+                            -
+                        </strong>
+
+                    </div>
+
+
+                    <div class="detalhe-item">
+
+                        <span>
+                            Rotação entrada
+                        </span>
+
+                        <strong id="detalheEntrada">
+                            -
+                        </strong>
+
+                    </div>
+
+
+                    <div class="detalhe-item">
+
+                        <span>
+                            Rotação saída
+                        </span>
+
+                        <strong id="detalheSaida">
+                            -
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <!-- FOTO -->
+
+                <div
+                    id="detalheFoto"
+                    class="detalhe-foto"
+                ></div>
+
+
+                <!-- OBSERVAÇÕES -->
+
+                <div
+                    id="detalheObservacoes"
+                    class="observacoes"
+                ></div>
+
+            </div>
+
+        </main>
+
     </div>
 
-    <script type="module" src="app.js"></script>
+
+    <script
+        type="module"
+        src="app.js"
+    ></script>
 
 </body>
 
