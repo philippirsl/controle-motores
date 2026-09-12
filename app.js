@@ -5,1363 +5,862 @@
 const SUPABASE_URL = "https://kxuzpnlizvmluroxenlg.supabase.co";
 const SUPABASE_KEY = "sb_publishable_2VUSWEN1y8Ggvl5qIfhthA_0P1v7bWP";
 
+const STORAGE_BUCKET = "fotos-equipamentos";
+const EDGE_FUNCTION = "ler-placa-gemini";
+
 const supabaseClient = window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY
 );
 
-const STORAGE_BUCKET = "fotos-equipamentos";
-
-
-// ------------------------------------------------------------
-// ESTADO DA APLICAÇÃO
-// ------------------------------------------------------------
-
 let equipamentos = [];
 let equipamentoAtual = null;
 let fotoSelecionada = null;
+let filtroAtual = "todos";
+let timerMensagem;
 
 
-// ------------------------------------------------------------
-// INICIALIZAÇÃO
-// ------------------------------------------------------------
+/* =========================================================
+   INICIALIZAÇÃO
+========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
 
-    configurarEventos();
+    document
+        .getElementById("btnCamera")
+        ?.addEventListener("click", () => {
+            document.getElementById("fotoCamera").click();
+        });
 
-    mostrarTela("home");
+    document
+        .getElementById("btnGaleria")
+        ?.addEventListener("click", () => {
+            document.getElementById("fotoGaleria").click();
+        });
 
+    document
+        .getElementById("fotoCamera")
+        ?.addEventListener("change", e => {
+            processarFoto(e.target.files?.[0]);
+        });
+
+    document
+        .getElementById("fotoGaleria")
+        ?.addEventListener("change", e => {
+            processarFoto(e.target.files?.[0]);
+        });
+
+    document
+        .getElementById("editFoto")
+        ?.addEventListener("change", e => {
+            previewEdicao(e.target.files?.[0]);
+        });
+
+    document
+        .getElementById("tipo")
+        ?.addEventListener("change", camposRedutor);
+
+    document
+        .getElementById("editTipo")
+        ?.addEventListener("change", camposRedutorEdicao);
+
+    document
+        .getElementById("btnSalvar")
+        ?.addEventListener("click", salvarEquipamento);
+
+    document
+        .getElementById("busca")
+        ?.addEventListener("input", renderizarLista);
+
+    document.querySelectorAll(".filtro").forEach(botao => {
+
+        botao.addEventListener("click", () => {
+
+            filtroAtual = botao.dataset.filtro;
+
+            document
+                .querySelectorAll(".filtro")
+                .forEach(x => x.classList.remove("ativo"));
+
+            botao.classList.add("ativo");
+
+            renderizarLista();
+        });
+    });
+
+    mostrarTela("telaHome");
 });
 
 
-// ------------------------------------------------------------
-// CONFIGURAÇÃO DOS EVENTOS
-// ------------------------------------------------------------
-
-function configurarEventos() {
-
-    // ---------------- HOME ----------------
-
-    const btnCadastrar =
-        document.getElementById("btnCadastrar");
-
-    if (btnCadastrar) {
-        btnCadastrar.addEventListener("click", () => {
-
-            limparFormulario();
-
-            mostrarTela("cadastro");
-
-        });
-    }
-
-
-    const btnConsultar =
-        document.getElementById("btnConsultar");
-
-    if (btnConsultar) {
-
-        btnConsultar.addEventListener("click", () => {
-
-            carregarEquipamentos();
-
-            mostrarTela("consulta");
-
-        });
-
-    }
-
-
-    // ---------------- VOLTAR ----------------
-
-    document.querySelectorAll("[data-voltar]")
-        .forEach(botao => {
-
-            botao.addEventListener("click", () => {
-
-                mostrarTela(
-                    botao.dataset.voltar || "home"
-                );
-
-            });
-
-        });
-
-
-    // ---------------- TIPO ----------------
-
-    const tipo =
-        document.getElementById("tipo");
-
-    if (tipo) {
-
-        tipo.addEventListener("change", () => {
-
-            atualizarCamposTipo();
-
-        });
-
-    }
-
-
-    // ---------------- FOTO ----------------
-
-    const inputCamera =
-        document.getElementById("cameraInput");
-
-    if (inputCamera) {
-
-        inputCamera.addEventListener(
-            "change",
-            evento => {
-
-                processarFotoSelecionada(
-                    evento.target.files[0]
-                );
-
-            }
-        );
-
-    }
-
-
-    const inputGaleria =
-        document.getElementById("galeriaInput");
-
-    if (inputGaleria) {
-
-        inputGaleria.addEventListener(
-            "change",
-            evento => {
-
-                processarFotoSelecionada(
-                    evento.target.files[0]
-                );
-
-            }
-        );
-
-    }
-
-
-    // ---------------- LEITURA IA ----------------
-
-    const btnLerPlaca =
-        document.getElementById("btnLerPlaca");
-
-    if (btnLerPlaca) {
-
-        btnLerPlaca.addEventListener(
-            "click",
-            processarPlacaComIA
-        );
-
-    }
-
-
-    // ---------------- SALVAR ----------------
-
-    const btnSalvar =
-        document.getElementById("btnSalvar");
-
-    if (btnSalvar) {
-
-        btnSalvar.addEventListener(
-            "click",
-            salvarEquipamento
-        );
-
-    }
-
-
-    // ---------------- ATUALIZAR ----------------
-
-    const btnAtualizar =
-        document.getElementById("btnAtualizar");
-
-    if (btnAtualizar) {
-
-        btnAtualizar.addEventListener(
-            "click",
-            atualizarEquipamento
-        );
-
-    }
-
-
-    // ---------------- PESQUISA ----------------
-
-    const campoBusca =
-        document.getElementById("campoBusca");
-
-    if (campoBusca) {
-
-        campoBusca.addEventListener(
-            "input",
-            () => {
-
-                renderizarEquipamentos(
-                    campoBusca.value
-                );
-
-            }
-        );
-
-    }
-
-}
-
-
-// ============================================================
-// NAVEGAÇÃO
-// ============================================================
-
-function mostrarTela(nome) {
+/* =========================================================
+   NAVEGAÇÃO
+========================================================= */
+
+function mostrarTela(id) {
 
     document
         .querySelectorAll(".tela")
-        .forEach(tela => {
+        .forEach(x => x.classList.remove("ativa"));
 
-            tela.classList.remove("ativa");
+    document
+        .getElementById(id)
+        ?.classList.add("ativa");
 
-        });
-
-
-    const tela =
-        document.getElementById(
-            "tela-" + nome
-        );
-
-    if (tela) {
-
-        tela.classList.add("ativa");
-
-    }
-
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
 }
 
 
-// ============================================================
-// FOTO
-// ============================================================
+function abrirCadastro() {
 
-function processarFotoSelecionada(file) {
+    limparCadastro();
+
+    mostrarTela("telaCadastro");
+}
+
+
+function abrirConsulta() {
+
+    mostrarTela("telaConsulta");
+
+    carregarEquipamentos();
+}
+
+
+function voltarHome() {
+
+    mostrarTela("telaHome");
+}
+
+
+function voltarConsulta() {
+
+    cancelarEdicao();
+
+    mostrarTela("telaConsulta");
+}
+
+
+/* =========================================================
+   CADASTRO
+========================================================= */
+
+function limparCadastro() {
+
+    [
+        "nome",
+        "local",
+        "tipo",
+        "fabricante",
+        "modelo",
+        "potencia_cv",
+        "tensao",
+        "corrente_a",
+        "rotacao_rpm",
+        "frequencia_hz",
+        "numero_serie",
+        "relacao",
+        "rotacao_entrada_rpm",
+        "rotacao_saida_rpm",
+        "observacoes"
+    ].forEach(id => {
+
+        setValue(id, "");
+
+    });
+
+    fotoSelecionada = null;
+
+    document
+        .getElementById("previewContainer")
+        ?.classList.add("oculto");
+
+    document
+        .getElementById("previewFoto")
+        ?.removeAttribute("src");
+
+    status("", "");
+
+    camposRedutor();
+}
+
+
+/* =========================================================
+   FOTO + GEMINI
+========================================================= */
+
+async function processarFoto(file) {
 
     if (!file) {
         return;
     }
 
-    fotoSelecionada = file;
+    if (!file.type.startsWith("image/")) {
 
-    const preview =
-        document.getElementById("previewFoto");
+        msg(
+            "Selecione uma imagem válida.",
+            "erro"
+        );
 
-    if (!preview) {
         return;
     }
 
-    const url =
-        URL.createObjectURL(file);
-
-    preview.src = url;
-
-    preview.style.display = "block";
-
-
-    const texto =
-        document.getElementById("semFoto");
-
-    if (texto) {
-
-        texto.style.display = "none";
-
-    }
-
-}
-
-
-// ============================================================
-// GEMINI - LEITURA DA PLACA
-// ============================================================
-
-async function processarPlacaComIA() {
-
     try {
 
-        if (!fotoSelecionada) {
+        const imagem = await prepararImagem(file);
 
-            alert(
-                "Primeiro tire uma foto ou escolha uma imagem da placa."
-            );
+        fotoSelecionada = {
+            file: file,
+            ...imagem
+        };
 
-            return;
+        const preview =
+            document.getElementById("previewFoto");
 
-        }
+        preview.src = imagem.dataUrl;
 
+        document
+            .getElementById("previewContainer")
+            .classList.remove("oculto");
 
-        const botao =
-            document.getElementById("btnLerPlaca");
-
-
-        if (botao) {
-
-            botao.disabled = true;
-
-            botao.textContent =
-                "Analisando placa...";
-
-        }
-
-
-        mostrarStatusOCR(
-            "Preparando imagem..."
+        status(
+            "Lendo a placa com inteligência artificial...",
+            ""
         );
 
 
-        const imagem =
-            await prepararImagemParaIA(
-                fotoSelecionada
-            );
+        /*
+         * Envia a imagem para a Edge Function.
+         *
+         * A chave do Gemini NÃO fica neste arquivo.
+         */
 
-
-        mostrarStatusOCR(
-            "Enviando placa para o Gemini..."
-        );
-
-
-        const { data, error } =
+        const resposta =
             await supabaseClient.functions.invoke(
-                "ler-placa-gemini",
+                EDGE_FUNCTION,
                 {
                     body: {
-
-                        imageBase64:
-                            imagem.base64,
-
-                        mimeType:
-                            imagem.mimeType
-
+                        imageBase64: imagem.base64,
+                        mimeType: imagem.mimeType
                     }
                 }
             );
 
 
-        if (error) {
-
-            console.error(
-                "Erro Edge Function:",
-                error
-            );
-
-            throw new Error(
-                error.message ||
-                "Erro ao consultar o Gemini."
-            );
-
+        if (resposta.error) {
+            throw resposta.error;
         }
 
 
-        if (!data || !data.sucesso) {
+        if (!resposta.data?.sucesso) {
 
             throw new Error(
-                data?.erro ||
-                "O Gemini não retornou os dados."
+                resposta.data?.erro ||
+                "Falha na leitura da placa."
             );
-
         }
 
 
-        console.log(
-            "Resultado completo do Gemini:",
-            data.dados
+        const dados =
+            resposta.data.dados || {};
+
+
+        preencherCamposComIA(dados);
+
+
+        status(
+            "Leitura concluída. Confira os dados antes de salvar.",
+            "sucesso"
         );
 
-
-        preencherCamposComGemini(
-            data.dados
-        );
-
-
-        mostrarStatusOCR(
-            "Leitura concluída. Confira os dados antes de salvar."
+        msg(
+            "Placa lida com sucesso.",
+            "sucesso"
         );
 
 
     } catch (erro) {
 
         console.error(
-            "Erro na leitura da placa:",
+            "Erro ao ler placa:",
             erro
         );
 
-
-        mostrarStatusOCR(
-            "Erro na leitura da placa."
+        status(
+            "Não foi possível ler a placa. Preencha os dados manualmente se necessário.",
+            "erro"
         );
 
-
-        alert(
-            "Não foi possível ler a placa.\n\n" +
-            erro.message
+        msg(
+            "Falha na leitura automática.",
+            "erro"
         );
-
-
-    } finally {
-
-        const botao =
-            document.getElementById("btnLerPlaca");
-
-
-        if (botao) {
-
-            botao.disabled = false;
-
-            botao.textContent =
-                "Ler placa com IA";
-
-        }
-
     }
-
 }
 
 
-// ============================================================
-// PREPARAR IMAGEM
-// ============================================================
+/* =========================================================
+   PREPARAÇÃO DA IMAGEM
+========================================================= */
 
-async function prepararImagemParaIA(file) {
+function prepararImagem(
+    file,
+    max = 1800,
+    qualidade = 0.88
+) {
 
-    const MAX_WIDTH = 1800;
-    const MAX_HEIGHT = 1800;
-    const QUALITY = 0.88;
+    return new Promise((resolve, reject) => {
 
+        const reader =
+            new FileReader();
 
-    const img = new Image();
+        reader.onload = () => {
 
-    const url =
-        URL.createObjectURL(file);
+            const imagem =
+                new Image();
 
+            imagem.onload = () => {
 
-    try {
+                let largura = imagem.width;
+                let altura = imagem.height;
 
-        await new Promise(
-            (resolve, reject) => {
-
-                img.onload = resolve;
-
-                img.onerror = reject;
-
-                img.src = url;
-
-            }
-        );
-
-
-        let largura =
-            img.naturalWidth;
-
-        let altura =
-            img.naturalHeight;
-
-
-        const escala =
-            Math.min(
-                MAX_WIDTH / largura,
-                MAX_HEIGHT / altura,
-                1
-            );
-
-
-        largura =
-            Math.round(
-                largura * escala
-            );
-
-        altura =
-            Math.round(
-                altura * escala
-            );
-
-
-        const canvas =
-            document.createElement(
-                "canvas"
-            );
-
-
-        canvas.width =
-            largura;
-
-        canvas.height =
-            altura;
-
-
-        const ctx =
-            canvas.getContext("2d");
-
-
-        ctx.drawImage(
-            img,
-            0,
-            0,
-            largura,
-            altura
-        );
-
-
-        const blob =
-            await new Promise(
-                resolve => {
-
-                    canvas.toBlob(
-                        resolve,
-                        "image/jpeg",
-                        QUALITY
+                const escala =
+                    Math.min(
+                        1,
+                        max / largura,
+                        max / altura
                     );
 
-                }
-            );
+                largura =
+                    Math.round(
+                        largura * escala
+                    );
+
+                altura =
+                    Math.round(
+                        altura * escala
+                    );
 
 
-        if (!blob) {
+                const canvas =
+                    document.createElement("canvas");
 
-            throw new Error(
-                "Não foi possível preparar a imagem."
-            );
-
-        }
+                canvas.width = largura;
+                canvas.height = altura;
 
 
-        const base64 =
-            await blobParaBase64(
-                blob
-            );
+                const contexto =
+                    canvas.getContext("2d");
+
+                contexto.drawImage(
+                    imagem,
+                    0,
+                    0,
+                    largura,
+                    altura
+                );
 
 
-        return {
-
-            base64: base64,
-
-            mimeType:
-                "image/jpeg"
-
-        };
+                const dataUrl =
+                    canvas.toDataURL(
+                        "image/jpeg",
+                        qualidade
+                    );
 
 
-    } finally {
-
-        URL.revokeObjectURL(url);
-
-    }
-
-}
-
-
-// ============================================================
-// BLOB → BASE64
-// ============================================================
-
-function blobParaBase64(blob) {
-
-    return new Promise(
-        (resolve, reject) => {
-
-            const reader =
-                new FileReader();
-
-
-            reader.onloadend = () => {
-
-                const resultado =
-                    reader.result;
-
-
-                const base64 =
-                    resultado.split(",")[1];
-
-
-                resolve(base64);
-
+                resolve({
+                    base64: dataUrl.split(",")[1],
+                    mimeType: "image/jpeg",
+                    dataUrl: dataUrl
+                });
             };
 
 
-            reader.onerror =
-                reject;
+            imagem.onerror = () => {
+
+                reject(
+                    new Error("Imagem inválida.")
+                );
+            };
 
 
-            reader.readAsDataURL(
-                blob
-            );
+            imagem.src = reader.result;
+        };
 
-        }
-    );
 
+        reader.onerror = () => {
+
+            reject(reader.error);
+        };
+
+
+        reader.readAsDataURL(file);
+    });
 }
 
 
-// ============================================================
-// STATUS OCR / IA
-// ============================================================
+/* =========================================================
+   PREENCHER CAMPOS COM RESULTADO DO GEMINI
+========================================================= */
 
-function mostrarStatusOCR(mensagem) {
+function preencherCamposComIA(dados) {
 
-    const elemento =
-        document.getElementById(
-            "ocrStatus"
-        );
-
-
-    if (elemento) {
-
-        elemento.textContent =
-            mensagem;
-
-    }
-
-
-    console.log(
-        "[IA]",
-        mensagem
-    );
-
-}
-
-
-// ============================================================
-// PREENCHER FORMULÁRIO COM RESULTADO DO GEMINI
-// ============================================================
-
-function preencherCamposComGemini(dados) {
-
-    if (!dados) {
-        return;
-    }
-
-
-    preencherSeExistir(
+    setValue(
         "fabricante",
         dados.fabricante
     );
 
-
-    preencherSeExistir(
+    setValue(
         "modelo",
         dados.modelo
     );
 
 
-    preencherSeExistir(
-        "potencia_kw",
-        dados.potencia_kw
-    );
+    /*
+     * Se o Gemini encontrar CV,
+     * usamos diretamente.
+     *
+     * Caso encontre somente kW,
+     * convertemos para CV.
+     */
+
+    let potenciaCV =
+        num(dados.potencia_cv);
+
+    const potenciaKW =
+        num(dados.potencia_kw);
 
 
-    preencherSeExistir(
+    if (
+        potenciaCV === null &&
+        potenciaKW !== null
+    ) {
+
+        potenciaCV =
+            potenciaKW / 0.73549875;
+    }
+
+
+    setValue(
         "potencia_cv",
-        dados.potencia_cv
+        potenciaCV === null
+            ? ""
+            : potenciaCV.toFixed(2)
     );
 
 
-    preencherSeExistir(
+    setValue(
         "tensao",
         dados.tensao
     );
 
 
-    // Preferimos mostrar a corrente completa
-    // quando a placa possui duas correntes.
-
-    if (
-        dados.corrente_texto
-    ) {
-
-        preencherSeExistir(
-            "corrente_a",
-            dados.corrente_texto
-        );
-
-    } else {
-
-        preencherSeExistir(
-            "corrente_a",
-            dados.corrente_a
-        );
-
-    }
+    setValue(
+        "corrente_a",
+        num(dados.corrente_a) ?? ""
+    );
 
 
-    preencherSeExistir(
+    setValue(
         "rotacao_rpm",
-        dados.rotacao_rpm
+        num(dados.rotacao_rpm) ?? ""
     );
 
 
-    preencherSeExistir(
+    setValue(
         "frequencia_hz",
-        dados.frequencia_hz
+        num(dados.frequencia_hz) ?? ""
     );
 
 
-    preencherSeExistir(
+    setValue(
         "numero_serie",
         dados.numero_serie
     );
 
 
-    preencherSeExistir(
+    setValue(
         "relacao",
         dados.relacao
     );
 
 
-    preencherSeExistir(
+    setValue(
         "rotacao_entrada_rpm",
-        dados.rotacao_entrada_rpm
+        num(dados.rotacao_entrada_rpm) ?? ""
     );
 
 
-    preencherSeExistir(
+    setValue(
         "rotacao_saida_rpm",
-        dados.rotacao_saida_rpm
+        num(dados.rotacao_saida_rpm) ?? ""
     );
 
 
-    // Campos adicionais, caso existam no HTML.
+    /*
+     * Tenta determinar automaticamente
+     * se é motor ou redutor.
+     */
 
-    preencherSeExistir(
-        "fator_servico",
-        dados.fator_servico
-    );
-
-
-    preencherSeExistir(
-        "fator_potencia",
-        dados.fator_potencia
-    );
-
-
-    preencherSeExistir(
-        "rendimento_percentual",
-        dados.rendimento_percentual
-    );
-
-
-    preencherSeExistir(
-        "classe_isolacao",
-        dados.classe_isolacao
-    );
-
-
-    preencherSeExistir(
-        "grau_protecao",
-        dados.grau_protecao
-    );
-
-
-    preencherSeExistir(
-        "regime",
-        dados.regime
-    );
-
-
-    preencherSeExistir(
-        "estrutura",
-        dados.estrutura
-    );
-
-
-    preencherSeExistir(
-        "peso_kg",
-        dados.peso_kg
-    );
-
-
-    // Observações
-
-    const observacoes =
-        document.getElementById(
-            "observacoes"
-        );
+    const textoIA =
+        JSON.stringify(dados)
+            .toLowerCase();
 
 
     if (
-        observacoes &&
-        dados.observacoes_placa
+        dados.relacao ||
+        textoIA.includes("redutor")
     ) {
 
-        observacoes.value =
-            dados.observacoes_placa;
-
-    }
-
-
-    // Se o tipo ainda não foi escolhido,
-    // tentamos identificar automaticamente.
-
-    const tipo =
-        document.getElementById(
-            "tipo"
+        setValue(
+            "tipo",
+            "Redutor"
         );
 
-
-    if (tipo) {
-
-        const texto =
-            (
-                dados.modelo ||
-                ""
-            ).toLowerCase();
-
-
-        if (
-            dados.relacao ||
-            dados.rotacao_saida_rpm
-        ) {
-
-            selecionarOpcao(
-                tipo,
-                "redutor"
-            );
-
-        } else if (
-            texto.includes("motor") ||
-            dados.potencia_kw ||
-            dados.potencia_cv
-        ) {
-
-            selecionarOpcao(
-                tipo,
-                "motor"
-            );
-
-        }
-
-
-        atualizarCamposTipo();
-
-    }
-
-}
-
-
-// ============================================================
-// PREENCHER CAMPO
-// ============================================================
-
-function preencherSeExistir(
-    id,
-    valor
-) {
-
-    if (
-        valor === null ||
-        valor === undefined ||
-        valor === ""
+    } else if (
+        dados.fabricante ||
+        dados.potencia_cv ||
+        dados.potencia_kw
     ) {
 
-        return;
-
-    }
-
-
-    const campo =
-        document.getElementById(id);
-
-
-    if (!campo) {
-
-        console.warn(
-            `Campo não encontrado: ${id}`
+        setValue(
+            "tipo",
+            "Motor elétrico"
         );
-
-        return;
-
     }
 
 
-    campo.value =
-        valor;
+    /*
+     * Informações que não possuem
+     * coluna própria no banco são
+     * preservadas em observações.
+     */
 
-}
+    const observacoes = [];
 
 
-// ============================================================
-// SELECIONAR OPÇÃO
-// ============================================================
+    if (dados.corrente_texto) {
 
-function selecionarOpcao(
-    select,
-    valor
-) {
-
-    const existe =
-        Array.from(
-            select.options
-        ).some(
-            opcao =>
-                opcao.value === valor
+        observacoes.push(
+            "Corrente da placa: " +
+            dados.corrente_texto
         );
-
-
-    if (existe) {
-
-        select.value =
-            valor;
-
     }
 
-}
 
+    if (dados.fator_servico != null) {
 
-// ============================================================
-// CAMPOS DE MOTOR / REDUTOR
-// ============================================================
-
-function atualizarCamposTipo() {
-
-    const tipo =
-        document.getElementById(
-            "tipo"
+        observacoes.push(
+            "Fator de serviço: " +
+            dados.fator_servico
         );
+    }
 
 
-    const camposRedutor =
-        document.getElementById(
-            "camposRedutor"
+    if (dados.fator_potencia != null) {
+
+        observacoes.push(
+            "Fator de potência: " +
+            dados.fator_potencia
         );
-
-
-    if (!tipo || !camposRedutor) {
-        return;
     }
 
 
-    if (
-        tipo.value === "redutor"
-    ) {
+    if (dados.rendimento_percentual != null) {
 
-        camposRedutor.style.display =
-            "block";
-
-    } else {
-
-        camposRedutor.style.display =
-            "none";
-
-    }
-
-}
-
-
-// ============================================================
-// LIMPAR FORMULÁRIO
-// ============================================================
-
-function limparFormulario() {
-
-    const form =
-        document.getElementById(
-            "formCadastro"
+        observacoes.push(
+            "Rendimento: " +
+            dados.rendimento_percentual +
+            "%"
         );
-
-
-    if (form) {
-
-        form.reset();
-
     }
 
 
-    fotoSelecionada =
-        null;
+    if (dados.classe_isolacao) {
 
-
-    equipamentoAtual =
-        null;
-
-
-    const preview =
-        document.getElementById(
-            "previewFoto"
+        observacoes.push(
+            "Classe de isolação: " +
+            dados.classe_isolacao
         );
-
-
-    if (preview) {
-
-        preview.src = "";
-
-        preview.style.display =
-            "none";
-
     }
 
 
-    const semFoto =
-        document.getElementById(
-            "semFoto"
+    if (dados.grau_protecao) {
+
+        observacoes.push(
+            "Grau de proteção: " +
+            dados.grau_protecao
         );
-
-
-    if (semFoto) {
-
-        semFoto.style.display =
-            "block";
-
     }
 
 
-    mostrarStatusOCR(
-        ""
+    if (dados.regime) {
+
+        observacoes.push(
+            "Regime: " +
+            dados.regime
+        );
+    }
+
+
+    if (dados.estrutura) {
+
+        observacoes.push(
+            "Estrutura: " +
+            dados.estrutura
+        );
+    }
+
+
+    if (dados.peso_kg != null) {
+
+        observacoes.push(
+            "Peso: " +
+            dados.peso_kg +
+            " kg"
+        );
+    }
+
+
+    if (dados.observacoes_placa) {
+
+        observacoes.push(
+            dados.observacoes_placa
+        );
+    }
+
+
+    setValue(
+        "observacoes",
+        observacoes.join("\n")
     );
 
 
-    atualizarCamposTipo();
-
+    camposRedutor();
 }
 
 
-// ============================================================
-// COLETAR FORMULÁRIO
-// ============================================================
-
-function obterDadosFormulario() {
-
-    return {
-
-        nome:
-            valorCampo("nome"),
-
-        local_instalacao:
-            valorCampo(
-                "local_instalacao"
-            ),
-
-        tipo:
-            valorCampo("tipo"),
-
-        fabricante:
-            valorCampo("fabricante"),
-
-        modelo:
-            valorCampo("modelo"),
-
-        potencia_cv:
-            numeroCampo(
-                "potencia_cv"
-            ),
-
-        potencia_kw:
-            numeroCampo(
-                "potencia_kw"
-            ),
-
-        tensao:
-            valorCampo("tensao"),
-
-        corrente_a:
-            valorCampo("corrente_a"),
-
-        rotacao_rpm:
-            numeroCampo(
-                "rotacao_rpm"
-            ),
-
-        frequencia_hz:
-            numeroCampo(
-                "frequencia_hz"
-            ),
-
-        numero_serie:
-            valorCampo(
-                "numero_serie"
-            ),
-
-        relacao:
-            valorCampo("relacao"),
-
-        rotacao_entrada_rpm:
-            numeroCampo(
-                "rotacao_entrada_rpm"
-            ),
-
-        rotacao_saida_rpm:
-            numeroCampo(
-                "rotacao_saida_rpm"
-            ),
-
-        observacoes:
-            valorCampo(
-                "observacoes"
-            )
-
-    };
-
-}
-
-
-// ============================================================
-// VALOR DE CAMPO
-// ============================================================
-
-function valorCampo(id) {
-
-    const campo =
-        document.getElementById(id);
-
-
-    if (!campo) {
-        return null;
-    }
-
-
-    const valor =
-        campo.value.trim();
-
-
-    return valor === ""
-        ? null
-        : valor;
-
-}
-
-
-// ============================================================
-// NÚMERO DE CAMPO
-// ============================================================
-
-function numeroCampo(id) {
-
-    const valor =
-        valorCampo(id);
-
-
-    if (
-        valor === null
-    ) {
-
-        return null;
-
-    }
-
-
-    const normalizado =
-        valor
-            .replace(",", ".")
-            .replace(/[^\d.-]/g, "");
-
-
-    const numero =
-        Number(
-            normalizado
-        );
-
-
-    return Number.isFinite(numero)
-        ? numero
-        : null;
-
-}
-
-
-// ============================================================
-// SALVAR EQUIPAMENTO
-// ============================================================
+/* =========================================================
+   SALVAR EQUIPAMENTO
+========================================================= */
 
 async function salvarEquipamento() {
 
+    const botao =
+        document.getElementById("btnSalvar");
+
+
+    const nome =
+        value("nome").trim();
+
+    const local =
+        value("local").trim();
+
+    const tipo =
+        value("tipo").trim();
+
+
+    if (!nome || !local || !tipo) {
+
+        msg(
+            "Preencha nome, local e tipo.",
+            "erro"
+        );
+
+        return;
+    }
+
+
+    botao.disabled = true;
+
+    botao.classList.add("carregando");
+
+    botao.textContent = "Salvando...";
+
+
     try {
 
-        const dados =
-            obterDadosFormulario();
+        const registro = {
+
+            nome: nome,
+
+            local_instalacao: local,
+
+            tipo: tipo,
+
+            fabricante:
+                texto("fabricante"),
+
+            modelo:
+                texto("modelo"),
+
+            potencia_cv:
+                numero("potencia_cv"),
+
+            tensao:
+                texto("tensao"),
+
+            corrente_a:
+                numero("corrente_a"),
+
+            rotacao_rpm:
+                numero("rotacao_rpm"),
+
+            frequencia_hz:
+                numero("frequencia_hz"),
+
+            numero_serie:
+                texto("numero_serie"),
+
+            relacao:
+                texto("relacao"),
+
+            rotacao_entrada_rpm:
+                numero("rotacao_entrada_rpm"),
+
+            rotacao_saida_rpm:
+                numero("rotacao_saida_rpm"),
+
+            observacoes:
+                texto("observacoes")
+        };
 
 
-        if (!dados.nome) {
+        /*
+         * Primeiro salva o registro
+         * no banco.
+         */
 
-            alert(
-                "Informe o nome do equipamento."
-            );
-
-            return;
-
-        }
-
-
-        if (!dados.local_instalacao) {
-
-            alert(
-                "Informe o local de instalação."
-            );
-
-            return;
-
-        }
-
-
-        if (!dados.tipo) {
-
-            alert(
-                "Selecione o tipo do equipamento."
-            );
-
-            return;
-
-        }
-
-
-        const botao =
-            document.getElementById(
-                "btnSalvar"
-            );
-
-
-        if (botao) {
-
-            botao.disabled =
-                true;
-
-            botao.textContent =
-                "Salvando...";
-
-        }
-
-
-        let caminhoFoto =
-            null;
-
-
-        // --------------------------------------------
-        // UPLOAD DA FOTO
-        // --------------------------------------------
-
-        if (fotoSelecionada) {
-
-            caminhoFoto =
-                await enviarFoto(
-                    fotoSelecionada
-                );
-
-        }
-
-
-        dados.foto_placa =
-            caminhoFoto;
-
-
-        // --------------------------------------------
-        // INSERT
-        // --------------------------------------------
-
-        const { data, error } =
+        let {
+            data,
+            error
+        } =
             await supabaseClient
                 .from("equipamentos")
-                .insert([dados])
+                .insert(registro)
                 .select()
                 .single();
 
 
         if (error) {
-
-            console.error(
-                "Erro ao salvar:",
-                error
-            );
-
-
-            // Se o banco falhar depois do upload,
-            // tentamos remover a foto.
-
-            if (caminhoFoto) {
-
-                await excluirFoto(
-                    caminhoFoto
-                );
-
-            }
-
-
             throw error;
-
         }
 
 
-        equipamentoAtual =
-            data;
+        /*
+         * Depois envia a foto.
+         */
+
+        if (fotoSelecionada?.file) {
+
+            const caminho =
+                await enviarFoto(
+                    fotoSelecionada.file,
+                    data.id
+                );
 
 
-        alert(
-            "Equipamento cadastrado com sucesso!"
+            const resultadoFoto =
+                await supabaseClient
+                    .from("equipamentos")
+                    .update({
+                        foto_placa: caminho
+                    })
+                    .eq("id", data.id);
+
+
+            if (resultadoFoto.error) {
+
+                await removerFoto(caminho);
+
+                throw resultadoFoto.error;
+            }
+        }
+
+
+        msg(
+            "Equipamento salvo com sucesso.",
+            "sucesso"
         );
 
 
-        limparFormulario();
-
-        mostrarTela(
-            "home"
+        setTimeout(
+            abrirConsulta,
+            600
         );
 
 
     } catch (erro) {
 
         console.error(
+            "Erro ao salvar:",
             erro
         );
 
-
-        alert(
-            "Não foi possível salvar o equipamento.\n\n" +
-            (erro.message || erro)
+        msg(
+            "Não foi possível salvar: " +
+            mensagemErro(erro),
+            "erro"
         );
 
 
     } finally {
 
-        const botao =
-            document.getElementById(
-                "btnSalvar"
-            );
+        botao.disabled = false;
 
+        botao.classList.remove(
+            "carregando"
+        );
 
-        if (botao) {
-
-            botao.disabled =
-                false;
-
-            botao.textContent =
-                "Salvar equipamento";
-
-        }
-
+        botao.textContent =
+            "Salvar equipamento";
     }
-
 }
 
 
-// ============================================================
-// UPLOAD DA FOTO
-// ============================================================
+/* =========================================================
+   UPLOAD DA FOTO
+========================================================= */
 
-async function enviarFoto(file) {
+async function enviarFoto(
+    file,
+    id
+) {
 
     const extensao =
-        obterExtensaoArquivo(
+        (
             file.name
-        );
+                .split(".")
+                .pop() ||
+            "jpg"
+        ).toLowerCase();
 
 
-    const nomeArquivo =
-        crypto.randomUUID() +
-        "." +
-        extensao;
+    const extensoesPermitidas = [
+        "jpg",
+        "jpeg",
+        "png",
+        "webp"
+    ];
+
+
+    const extensaoFinal =
+        extensoesPermitidas.includes(
+            extensao
+        )
+            ? extensao
+            : "jpg";
 
 
     const caminho =
-        "equipamentos/" +
-        nomeArquivo;
+        `equipamentos/${id}.${extensaoFinal}`;
 
 
-    const { error } =
+    const {
+        error
+    } =
         await supabaseClient
             .storage
             .from(STORAGE_BUCKET)
@@ -1369,12 +868,7 @@ async function enviarFoto(file) {
                 caminho,
                 file,
                 {
-                    cacheControl:
-                        "3600",
-
-                    upsert:
-                        false,
-
+                    upsert: true,
                     contentType:
                         file.type ||
                         "image/jpeg"
@@ -1383,68 +877,17 @@ async function enviarFoto(file) {
 
 
     if (error) {
-
-        console.error(
-            "Erro upload:",
-            error
-        );
-
-        throw new Error(
-            "Não foi possível enviar a foto: " +
-            error.message
-        );
-
+        throw error;
     }
 
 
     return caminho;
-
 }
 
 
-// ============================================================
-// EXTENSÃO
-// ============================================================
-
-function obterExtensaoArquivo(nome) {
-
-    const partes =
-        nome.split(".");
-
-
-    if (
-        partes.length < 2
-    ) {
-
-        return "jpg";
-
-    }
-
-
-    const extensao =
-        partes
-            .pop()
-            .toLowerCase();
-
-
-    if (
-        ["jpg", "jpeg", "png", "webp"]
-            .includes(extensao)
-    ) {
-
-        return extensao;
-
-    }
-
-
-    return "jpg";
-
-}
-
-
-// ============================================================
-// CONSULTAR EQUIPAMENTOS
-// ============================================================
+/* =========================================================
+   CONSULTA
+========================================================= */
 
 async function carregarEquipamentos() {
 
@@ -1454,61 +897,67 @@ async function carregarEquipamentos() {
         );
 
 
-    if (lista) {
-
-        lista.innerHTML =
-            "<p>Carregando...</p>";
-
-    }
-
-
-    const { data, error } =
-        await supabaseClient
-            .from("equipamentos")
-            .select("*")
-            .order(
-                "criado_em",
-                {
-                    ascending: false
-                }
-            );
+    lista.innerHTML =
+        `
+        <div class="lista-vazia">
+            Carregando equipamentos...
+        </div>
+        `;
 
 
-    if (error) {
+    try {
+
+        const {
+            data,
+            error
+        } =
+            await supabaseClient
+                .from("equipamentos")
+                .select("*")
+                .order("nome");
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        equipamentos =
+            data || [];
+
+
+        renderizarLista();
+
+
+    } catch (erro) {
 
         console.error(
-            error
+            "Erro ao carregar:",
+            erro
         );
 
 
-        if (lista) {
-
-            lista.innerHTML =
-                "<p>Erro ao carregar equipamentos.</p>";
-
-        }
-
-        return;
-
+        lista.innerHTML =
+            `
+            <div class="lista-vazia">
+                Não foi possível carregar os equipamentos.
+                <br>
+                <small>
+                    ${esc(
+                        mensagemErro(erro)
+                    )}
+                </small>
+            </div>
+            `;
     }
-
-
-    equipamentos =
-        data || [];
-
-
-    renderizarEquipamentos();
-
 }
 
 
-// ============================================================
-// RENDERIZAR LISTA
-// ============================================================
+/* =========================================================
+   RENDERIZAR LISTA
+========================================================= */
 
-function renderizarEquipamentos(
-    filtro = ""
-) {
+function renderizarLista() {
 
     const lista =
         document.getElementById(
@@ -1516,377 +965,373 @@ function renderizarEquipamentos(
         );
 
 
-    if (!lista) {
-        return;
-    }
+    const pesquisa =
+        value("busca")
+            .trim()
+            .toLowerCase();
 
 
-    const busca =
-        filtro
-            .toLowerCase()
-            .trim();
+    const filtrados =
+        equipamentos.filter(equipamento => {
+
+            const textoBusca = [
+
+                equipamento.nome,
+
+                equipamento.local_instalacao,
+
+                equipamento.tipo,
+
+                equipamento.fabricante,
+
+                equipamento.modelo,
+
+                equipamento.numero_serie
+
+            ]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase();
 
 
-    const resultados =
-        equipamentos.filter(
-            equipamento => {
-
-                const texto = [
-
-                    equipamento.nome,
-
-                    equipamento.local_instalacao,
-
-                    equipamento.tipo,
-
-                    equipamento.fabricante,
-
-                    equipamento.modelo,
-
-                    equipamento.numero_serie
-
-                ]
-                    .filter(Boolean)
-                    .join(" ")
-                    .toLowerCase();
-
-
-                return texto.includes(
-                    busca
+            const correspondePesquisa =
+                !pesquisa ||
+                textoBusca.includes(
+                    pesquisa
                 );
 
+
+            let correspondeFiltro =
+                true;
+
+
+            if (
+                filtroAtual === "motor"
+            ) {
+
+                correspondeFiltro =
+                    String(
+                        equipamento.tipo || ""
+                    )
+                        .toLowerCase()
+                        .includes("motor");
             }
-        );
 
 
-    if (
-        resultados.length === 0
-    ) {
+            if (
+                filtroAtual === "redutor"
+            ) {
+
+                correspondeFiltro =
+                    String(
+                        equipamento.tipo || ""
+                    )
+                        .toLowerCase()
+                        .includes("redutor");
+            }
+
+
+            return (
+                correspondePesquisa &&
+                correspondeFiltro
+            );
+        });
+
+
+    if (!filtrados.length) {
 
         lista.innerHTML =
-            "<p>Nenhum equipamento encontrado.</p>";
+            `
+            <div class="lista-vazia">
+                Nenhum equipamento encontrado.
+            </div>
+            `;
 
         return;
-
     }
 
 
     lista.innerHTML =
-        resultados
-            .map(
-                equipamento =>
-                    criarCardEquipamento(
-                        equipamento
-                    )
-            )
+        filtrados
+            .map(equipamento => {
+
+                return `
+                    <div
+                        class="equipamento-item"
+                        onclick="abrirDetalhes('${equipamento.id}')"
+                    >
+
+                        <div class="item-linha">
+
+                            <div>
+
+                                <h3>
+                                    ${esc(
+                                        equipamento.nome ||
+                                        "Sem nome"
+                                    )}
+                                </h3>
+
+                                <p>
+                                    ${esc(
+                                        equipamento.local_instalacao ||
+                                        "-"
+                                    )}
+                                </p>
+
+                            </div>
+
+
+                            <span class="badge">
+                                ${esc(
+                                    equipamento.tipo ||
+                                    "-"
+                                )}
+                            </span>
+
+                        </div>
+
+
+                        <p>
+                            ${esc(
+                                equipamento.fabricante ||
+                                ""
+                            )}
+
+                            ${
+                                equipamento.modelo
+                                    ? " • " +
+                                      esc(
+                                          equipamento.modelo
+                                      )
+                                    : ""
+                            }
+                        </p>
+
+                    </div>
+                `;
+            })
             .join("");
-
-
-    lista
-        .querySelectorAll(
-            "[data-equipamento-id]"
-        )
-        .forEach(card => {
-
-            card.addEventListener(
-                "click",
-                () => {
-
-                    const id =
-                        card.dataset
-                            .equipamentoId;
-
-
-                    abrirDetalhes(
-                        id
-                    );
-
-                }
-            );
-
-        });
-
 }
 
 
-// ============================================================
-// CARD
-// ============================================================
-
-function criarCardEquipamento(
-    equipamento
-) {
-
-    const tipo =
-        equipamento.tipo === "motor"
-            ? "Motor elétrico"
-            : equipamento.tipo === "redutor"
-                ? "Redutor"
-                : "Outro";
-
-
-    return `
-        <div
-            class="card-equipamento"
-            data-equipamento-id="${escapeHtml(equipamento.id)}"
-        >
-
-            <div class="card-conteudo">
-
-                <h3>
-                    ${escapeHtml(
-                        equipamento.nome ||
-                        "Equipamento"
-                    )}
-                </h3>
-
-                <p>
-                    ${escapeHtml(tipo)}
-                </p>
-
-                <p>
-                    ${escapeHtml(
-                        equipamento.fabricante ||
-                        ""
-                    )}
-                    ${equipamento.modelo
-                        ? " • " +
-                          escapeHtml(
-                              equipamento.modelo
-                          )
-                        : ""
-                    }
-                </p>
-
-                <small>
-                    ${escapeHtml(
-                        equipamento.local_instalacao ||
-                        ""
-                    )}
-                </small>
-
-            </div>
-
-        </div>
-    `;
-
-}
-
-
-// ============================================================
-// DETALHES
-// ============================================================
+/* =========================================================
+   DETALHES
+========================================================= */
 
 async function abrirDetalhes(id) {
 
-    const equipamento =
+    equipamentoAtual =
         equipamentos.find(
-            item =>
-                item.id === id
+            equipamento =>
+                equipamento.id === id
         );
 
 
-    if (!equipamento) {
+    if (!equipamentoAtual) {
         return;
     }
 
 
-    equipamentoAtual =
-        equipamento;
-
-
     preencherDetalhes(
-        equipamento
+        equipamentoAtual
     );
 
 
     mostrarTela(
-        "detalhes"
+        "telaDetalhes"
     );
 
+
+    await carregarFoto(
+        equipamentoAtual.foto_placa
+    );
 }
 
 
-// ============================================================
-// PREENCHER DETALHES
-// ============================================================
+/* =========================================================
+   PREENCHER DETALHES
+========================================================= */
 
-async function preencherDetalhes(
-    equipamento
-) {
+function preencherDetalhes(equipamento) {
 
-    preencherTexto(
+    setText(
         "detNome",
-        equipamento.nome
+        equipamento.nome || "-"
     );
 
-    preencherTexto(
+    setText(
         "detLocal",
-        equipamento.local_instalacao
+        equipamento.local_instalacao || "-"
     );
 
-    preencherTexto(
+    setText(
         "detTipo",
-        equipamento.tipo
+        equipamento.tipo || "-"
     );
 
-    preencherTexto(
+    setText(
         "detFabricante",
-        equipamento.fabricante
+        equipamento.fabricante || "-"
     );
 
-    preencherTexto(
+    setText(
         "detModelo",
-        equipamento.modelo
+        equipamento.modelo || "-"
     );
 
-    preencherTexto(
+
+    setText(
         "detPotencia",
-        montarPotencia(
-            equipamento
-        )
+        equipamento.potencia_cv == null
+            ? "-"
+            : equipamento.potencia_cv +
+              " CV"
     );
 
-    preencherTexto(
+
+    setText(
         "detTensao",
-        equipamento.tensao
+        equipamento.tensao || "-"
     );
 
-    preencherTexto(
+
+    setText(
         "detCorrente",
-        equipamento.corrente_a
+        equipamento.corrente_a == null
+            ? "-"
+            : equipamento.corrente_a +
+              " A"
     );
 
-    preencherTexto(
+
+    setText(
         "detRotacao",
-        equipamento.rotacao_rpm
+        equipamento.rotacao_rpm == null
+            ? "-"
+            : equipamento.rotacao_rpm +
+              " RPM"
     );
 
-    preencherTexto(
+
+    setText(
         "detFrequencia",
-        equipamento.frequencia_hz
+        equipamento.frequencia_hz == null
+            ? "-"
+            : equipamento.frequencia_hz +
+              " Hz"
     );
 
-    preencherTexto(
+
+    setText(
         "detSerie",
-        equipamento.numero_serie
+        equipamento.numero_serie || "-"
     );
 
-    preencherTexto(
+
+    setText(
         "detRelacao",
-        equipamento.relacao
+        equipamento.relacao || "-"
     );
 
-    preencherTexto(
-        "detRotacaoEntrada",
-        equipamento.rotacao_entrada_rpm
+
+    setText(
+        "detEntrada",
+        equipamento.rotacao_entrada_rpm == null
+            ? "-"
+            : equipamento.rotacao_entrada_rpm +
+              " RPM"
     );
 
-    preencherTexto(
-        "detRotacaoSaida",
-        equipamento.rotacao_saida_rpm
+
+    setText(
+        "detSaida",
+        equipamento.rotacao_saida_rpm == null
+            ? "-"
+            : equipamento.rotacao_saida_rpm +
+              " RPM"
     );
 
-    preencherTexto(
+
+    setText(
         "detObservacoes",
-        equipamento.observacoes
+        equipamento.observacoes || "-"
     );
 
 
-    // FOTO
+    const ehRedutor =
+        String(
+            equipamento.tipo || ""
+        )
+            .toLowerCase()
+            .includes("redutor");
+
+
+    document
+        .getElementById("detRedutorBox")
+        .classList.toggle(
+            "oculto",
+            !ehRedutor
+        );
+
+
+    document
+        .getElementById("modoVisualizacao")
+        .classList.remove("oculto");
+
+
+    document
+        .getElementById("modoEdicao")
+        .classList.add("oculto");
+}
+
+
+/* =========================================================
+   CARREGAR FOTO COM URL ASSINADA
+========================================================= */
+
+async function carregarFoto(valor) {
 
     const imagem =
         document.getElementById(
             "detFoto"
         );
 
-
     const semFoto =
         document.getElementById(
-            "semFotoDetalhes"
+            "semFoto"
         );
 
 
-    if (imagem) {
+    imagem.removeAttribute("src");
 
-        imagem.style.display =
-            "none";
+    imagem.classList.add(
+        "oculto"
+    );
 
-    }
+    semFoto.classList.remove(
+        "oculto"
+    );
 
-
-    if (semFoto) {
-
-        semFoto.style.display =
-            "block";
-
-    }
-
-
-    if (
-        equipamento.foto_placa
-    ) {
-
-        const url =
-            await obterUrlFoto(
-                equipamento.foto_placa
-            );
-
-
-        if (
-            url &&
-            imagem
-        ) {
-
-            imagem.src =
-                url;
-
-            imagem.style.display =
-                "block";
-
-
-            if (semFoto) {
-
-                semFoto.style.display =
-                    "none";
-
-            }
-
-        }
-
-    }
-
-}
-
-
-// ============================================================
-// URL DA FOTO
-// ============================================================
-
-async function obterUrlFoto(
-    valor
-) {
 
     if (!valor) {
-        return null;
+        return;
     }
 
 
     const caminho =
-        extrairCaminhoFoto(
-            valor
-        );
+        extrairCaminhoFoto(valor);
 
 
     if (!caminho) {
-        return null;
+        return;
     }
 
 
-    // Usamos URL assinada.
-    // Assim o bucket pode permanecer privado.
-
-    const { data, error } =
+    const {
+        data,
+        error
+    } =
         await supabaseClient
             .storage
             .from(STORAGE_BUCKET)
@@ -1896,320 +1341,380 @@ async function obterUrlFoto(
             );
 
 
-    if (error) {
+    if (
+        error ||
+        !data?.signedUrl
+    ) {
 
         console.error(
             "Erro ao criar URL da foto:",
             error
         );
 
-        return null;
-
+        return;
     }
 
 
-    return data?.signedUrl ||
-        null;
+    imagem.onload = () => {
 
+        imagem.classList.remove(
+            "oculto"
+        );
+
+        semFoto.classList.add(
+            "oculto"
+        );
+    };
+
+
+    imagem.src =
+        data.signedUrl;
 }
 
 
-// ============================================================
-// EXTRAIR CAMINHO DA FOTO
-// ============================================================
+/* =========================================================
+   EXTRAIR CAMINHO DA FOTO
+========================================================= */
 
-function extrairCaminhoFoto(
-    valor
-) {
+function extrairCaminhoFoto(valor) {
 
     if (!valor) {
         return null;
     }
 
 
-    // Foto nova salva como:
-    // equipamentos/arquivo.jpg
+    /*
+     * Novo formato:
+     *
+     * equipamentos/UUID.jpg
+     */
 
     if (
-        !valor.startsWith(
-            "http://"
-        ) &&
-        !valor.startsWith(
-            "https://"
-        )
+        !/^https?:\/\//i.test(valor)
     ) {
 
         return valor;
-
     }
 
 
-    // Compatibilidade com URLs antigas
+    /*
+     * Compatibilidade com fotos
+     * antigas salvas como URL pública.
+     */
 
-    const marcador =
+    const urlPublica =
         `/storage/v1/object/public/${STORAGE_BUCKET}/`;
 
 
-    const posicao =
-        valor.indexOf(
-            marcador
-        );
+    const urlAssinada =
+        `/storage/v1/object/sign/${STORAGE_BUCKET}/`;
 
 
     if (
-        posicao >= 0
+        valor.includes(
+            urlPublica
+        )
     ) {
 
-        return valor.substring(
-            posicao +
-            marcador.length
+        return decodeURIComponent(
+            valor
+                .split(urlPublica)[1]
+                .split("?")[0]
         );
+    }
 
+
+    if (
+        valor.includes(
+            urlAssinada
+        )
+    ) {
+
+        return decodeURIComponent(
+            valor
+                .split(urlAssinada)[1]
+                .split("?")[0]
+        );
     }
 
 
     return null;
-
 }
 
 
-// ============================================================
-// EDITAR
-// ============================================================
+/* =========================================================
+   EDIÇÃO
+========================================================= */
 
-function abrirEdicao() {
+function ativarEdicao() {
 
     if (!equipamentoAtual) {
         return;
     }
 
 
-    preencherCampo(
+    const equipamento =
+        equipamentoAtual;
+
+
+    setValue(
         "editNome",
-        equipamentoAtual.nome
+        equipamento.nome
     );
 
-    preencherCampo(
+    setValue(
         "editLocal",
-        equipamentoAtual.local_instalacao
+        equipamento.local_instalacao
     );
 
-    preencherCampo(
+    setValue(
         "editTipo",
-        equipamentoAtual.tipo
+        equipamento.tipo
     );
 
-    preencherCampo(
+    setValue(
         "editFabricante",
-        equipamentoAtual.fabricante
+        equipamento.fabricante
     );
 
-    preencherCampo(
+    setValue(
         "editModelo",
-        equipamentoAtual.modelo
+        equipamento.modelo
     );
 
-    preencherCampo(
-        "editPotenciaCV",
-        equipamentoAtual.potencia_cv
+    setValue(
+        "editPotencia",
+        equipamento.potencia_cv
     );
 
-    preencherCampo(
-        "editPotenciaKW",
-        equipamentoAtual.potencia_kw
-    );
-
-    preencherCampo(
+    setValue(
         "editTensao",
-        equipamentoAtual.tensao
+        equipamento.tensao
     );
 
-    preencherCampo(
+    setValue(
         "editCorrente",
-        equipamentoAtual.corrente_a
+        equipamento.corrente_a
     );
 
-    preencherCampo(
+    setValue(
         "editRotacao",
-        equipamentoAtual.rotacao_rpm
+        equipamento.rotacao_rpm
     );
 
-    preencherCampo(
+    setValue(
         "editFrequencia",
-        equipamentoAtual.frequencia_hz
+        equipamento.frequencia_hz
     );
 
-    preencherCampo(
+    setValue(
         "editSerie",
-        equipamentoAtual.numero_serie
+        equipamento.numero_serie
     );
 
-    preencherCampo(
+    setValue(
         "editRelacao",
-        equipamentoAtual.relacao
+        equipamento.relacao
     );
 
-    preencherCampo(
-        "editRotacaoEntrada",
-        equipamentoAtual.rotacao_entrada_rpm
+    setValue(
+        "editEntrada",
+        equipamento.rotacao_entrada_rpm
     );
 
-    preencherCampo(
-        "editRotacaoSaida",
-        equipamentoAtual.rotacao_saida_rpm
+    setValue(
+        "editSaida",
+        equipamento.rotacao_saida_rpm
     );
 
-    preencherCampo(
+    setValue(
         "editObservacoes",
-        equipamentoAtual.observacoes
+        equipamento.observacoes
     );
 
 
-    mostrarTela(
-        "edicao"
-    );
+    document
+        .getElementById("editFoto")
+        .value = "";
 
+
+    document
+        .getElementById("editPreviewFoto")
+        .classList.add("oculto");
+
+
+    camposRedutorEdicao();
+
+
+    document
+        .getElementById("modoVisualizacao")
+        .classList.add("oculto");
+
+
+    document
+        .getElementById("modoEdicao")
+        .classList.remove("oculto");
 }
 
 
-// ============================================================
-// ATUALIZAR EQUIPAMENTO
-// ============================================================
+/* =========================================================
+   CANCELAR EDIÇÃO
+========================================================= */
 
-async function atualizarEquipamento() {
+function cancelarEdicao() {
+
+    document
+        .getElementById("modoVisualizacao")
+        ?.classList.remove(
+            "oculto"
+        );
+
+
+    document
+        .getElementById("modoEdicao")
+        ?.classList.add(
+            "oculto"
+        );
+}
+
+
+/* =========================================================
+   SELECIONAR FOTO NA EDIÇÃO
+========================================================= */
+
+function selecionarFotoEdicao() {
+
+    document
+        .getElementById("editFoto")
+        .click();
+}
+
+
+/* =========================================================
+   PREVIEW DA FOTO NA EDIÇÃO
+========================================================= */
+
+async function previewEdicao(file) {
+
+    if (!file) {
+        return;
+    }
+
+
+    const imagem =
+        await prepararImagem(file);
+
+
+    const preview =
+        document.getElementById(
+            "editPreviewFoto"
+        );
+
+
+    preview.src =
+        imagem.dataUrl;
+
+
+    preview.classList.remove(
+        "oculto"
+    );
+}
+
+
+/* =========================================================
+   SALVAR ALTERAÇÕES
+========================================================= */
+
+async function salvarAlteracoes() {
 
     if (!equipamentoAtual) {
         return;
     }
+
+
+    const dados = {
+
+        nome:
+            value("editNome").trim(),
+
+        local_instalacao:
+            value("editLocal").trim(),
+
+        tipo:
+            value("editTipo"),
+
+        fabricante:
+            texto("editFabricante"),
+
+        modelo:
+            texto("editModelo"),
+
+        potencia_cv:
+            numero("editPotencia"),
+
+        tensao:
+            texto("editTensao"),
+
+        corrente_a:
+            numero("editCorrente"),
+
+        rotacao_rpm:
+            numero("editRotacao"),
+
+        frequencia_hz:
+            numero("editFrequencia"),
+
+        numero_serie:
+            texto("editSerie"),
+
+        relacao:
+            texto("editRelacao"),
+
+        rotacao_entrada_rpm:
+            numero("editEntrada"),
+
+        rotacao_saida_rpm:
+            numero("editSaida"),
+
+        observacoes:
+            texto("editObservacoes"),
+
+        atualizado_em:
+            new Date().toISOString()
+    };
 
 
     try {
 
-        const dados = {
-
-            nome:
-                valorCampoId(
-                    "editNome"
-                ),
-
-            local_instalacao:
-                valorCampoId(
-                    "editLocal"
-                ),
-
-            tipo:
-                valorCampoId(
-                    "editTipo"
-                ),
-
-            fabricante:
-                valorCampoId(
-                    "editFabricante"
-                ),
-
-            modelo:
-                valorCampoId(
-                    "editModelo"
-                ),
-
-            potencia_cv:
-                numeroCampoId(
-                    "editPotenciaCV"
-                ),
-
-            potencia_kw:
-                numeroCampoId(
-                    "editPotenciaKW"
-                ),
-
-            tensao:
-                valorCampoId(
-                    "editTensao"
-                ),
-
-            corrente_a:
-                valorCampoId(
-                    "editCorrente"
-                ),
-
-            rotacao_rpm:
-                numeroCampoId(
-                    "editRotacao"
-                ),
-
-            frequencia_hz:
-                numeroCampoId(
-                    "editFrequencia"
-                ),
-
-            numero_serie:
-                valorCampoId(
-                    "editSerie"
-                ),
-
-            relacao:
-                valorCampoId(
-                    "editRelacao"
-                ),
-
-            rotacao_entrada_rpm:
-                numeroCampoId(
-                    "editRotacaoEntrada"
-                ),
-
-            rotacao_saida_rpm:
-                numeroCampoId(
-                    "editRotacaoSaida"
-                ),
-
-            observacoes:
-                valorCampoId(
-                    "editObservacoes"
-                ),
-
-            atualizado_em:
-                new Date().toISOString()
-
-        };
+        const arquivo =
+            document
+                .getElementById("editFoto")
+                .files?.[0];
 
 
-        const inputFoto =
-            document.getElementById(
-                "editFotoInput"
-            );
+        const fotoAntiga =
+            equipamentoAtual.foto_placa;
 
 
-        let novaFoto =
-            null;
+        /*
+         * Se o usuário escolheu uma
+         * nova foto, fazemos o upload.
+         */
 
-
-        if (
-            inputFoto &&
-            inputFoto.files &&
-            inputFoto.files.length > 0
-        ) {
-
-            novaFoto =
-                inputFoto.files[0];
-
-        }
-
-
-        if (novaFoto) {
-
-            const novoCaminho =
-                await enviarFoto(
-                    novaFoto
-                );
-
+        if (arquivo) {
 
             dados.foto_placa =
-                novoCaminho;
-
+                await enviarFoto(
+                    arquivo,
+                    equipamentoAtual.id
+                );
         }
 
 
-        const { data, error } =
+        const {
+            data,
+            error
+        } =
             await supabaseClient
                 .from("equipamentos")
                 .update(dados)
@@ -2222,23 +1727,25 @@ async function atualizarEquipamento() {
 
 
         if (error) {
-
             throw error;
-
         }
 
 
-        // Se houve foto nova, removemos a antiga.
+        /*
+         * Remove a foto antiga somente
+         * depois que a atualização
+         * foi concluída.
+         */
 
         if (
-            novaFoto &&
-            equipamentoAtual.foto_placa
+            arquivo &&
+            fotoAntiga &&
+            dados.foto_placa !== fotoAntiga
         ) {
 
-            await excluirFoto(
-                equipamentoAtual.foto_placa
+            await removerFoto(
+                fotoAntiga
             );
-
         }
 
 
@@ -2246,28 +1753,18 @@ async function atualizarEquipamento() {
             data;
 
 
-        // Atualiza também a lista local
-
         const indice =
             equipamentos.findIndex(
-                item =>
-                    item.id === data.id
+                equipamento =>
+                    equipamento.id === data.id
             );
 
 
-        if (
-            indice >= 0
-        ) {
+        if (indice >= 0) {
 
             equipamentos[indice] =
                 data;
-
         }
-
-
-        alert(
-            "Equipamento atualizado com sucesso!"
-        );
 
 
         preencherDetalhes(
@@ -2275,31 +1772,37 @@ async function atualizarEquipamento() {
         );
 
 
-        mostrarTela(
-            "detalhes"
+        await carregarFoto(
+            data.foto_placa
+        );
+
+
+        msg(
+            "Alterações salvas.",
+            "sucesso"
         );
 
 
     } catch (erro) {
 
         console.error(
+            "Erro ao alterar:",
             erro
         );
 
 
-        alert(
-            "Não foi possível atualizar o equipamento.\n\n" +
-            (erro.message || erro)
+        msg(
+            "Não foi possível alterar: " +
+            mensagemErro(erro),
+            "erro"
         );
-
     }
-
 }
 
 
-// ============================================================
-// EXCLUIR EQUIPAMENTO
-// ============================================================
+/* =========================================================
+   EXCLUIR EQUIPAMENTO
+========================================================= */
 
 async function excluirEquipamento() {
 
@@ -2308,20 +1811,26 @@ async function excluirEquipamento() {
     }
 
 
-    const confirmar =
+    const confirmou =
         confirm(
-            "Tem certeza que deseja excluir este equipamento?"
+            `Deseja excluir "${equipamentoAtual.nome}"?`
         );
 
 
-    if (!confirmar) {
+    if (!confirmou) {
         return;
     }
 
 
     try {
 
-        const { error } =
+        const foto =
+            equipamentoAtual.foto_placa;
+
+
+        const {
+            error
+        } =
             await supabaseClient
                 .from("equipamentos")
                 .delete()
@@ -2332,77 +1841,71 @@ async function excluirEquipamento() {
 
 
         if (error) {
-
             throw error;
-
         }
 
 
-        if (
-            equipamentoAtual.foto_placa
-        ) {
+        /*
+         * Depois de excluir o registro,
+         * remove também a foto.
+         */
 
-            await excluirFoto(
-                equipamentoAtual.foto_placa
+        if (foto) {
+
+            await removerFoto(
+                foto
             );
-
         }
 
 
         equipamentos =
             equipamentos.filter(
-                item =>
-                    item.id !==
+                equipamento =>
+                    equipamento.id !==
                     equipamentoAtual.id
             );
 
 
-        equipamentoAtual =
-            null;
+        equipamentoAtual = null;
 
 
-        alert(
-            "Equipamento excluído com sucesso!"
+        msg(
+            "Equipamento excluído.",
+            "sucesso"
         );
 
 
-        mostrarTela(
-            "consulta"
+        setTimeout(
+            abrirConsulta,
+            500
         );
-
-
-        renderizarEquipamentos();
 
 
     } catch (erro) {
 
         console.error(
+            "Erro ao excluir:",
             erro
         );
 
 
-        alert(
-            "Não foi possível excluir o equipamento.\n\n" +
-            (erro.message || erro)
+        msg(
+            "Não foi possível excluir: " +
+            mensagemErro(erro),
+            "erro"
         );
-
     }
-
 }
 
 
-// ============================================================
-// EXCLUIR FOTO
-// ============================================================
+/* =========================================================
+   REMOVER FOTO DO STORAGE
+========================================================= */
 
-async function excluirFoto(
-    valor
-) {
+async function removerFoto(valor) {
 
     const caminho =
-        extrairCaminhoFoto(
-            valor
-        );
+        extrairCaminhoFoto(valor);
 
 
     if (!caminho) {
@@ -2410,7 +1913,9 @@ async function excluirFoto(
     }
 
 
-    const { error } =
+    const {
+        error
+    } =
         await supabaseClient
             .storage
             .from(STORAGE_BUCKET)
@@ -2422,20 +1927,163 @@ async function excluirFoto(
     if (error) {
 
         console.error(
-            "Erro ao excluir foto:",
+            "Erro ao remover foto:",
             error
         );
-
     }
-
 }
 
 
-// ============================================================
-// FUNÇÕES AUXILIARES
-// ============================================================
+/* =========================================================
+   CAMPOS DE REDUTOR
+========================================================= */
 
-function preencherTexto(
+function camposRedutor() {
+
+    const tipo =
+        value("tipo")
+            .toLowerCase();
+
+
+    document
+        .getElementById("camposRedutor")
+        ?.classList.toggle(
+            "oculto",
+            !tipo.includes("redutor")
+        );
+}
+
+
+function camposRedutorEdicao() {
+
+    const tipo =
+        value("editTipo")
+            .toLowerCase();
+
+
+    document
+        .getElementById("editRedutorBox")
+        ?.classList.toggle(
+            "oculto",
+            !tipo.includes("redutor")
+        );
+}
+
+
+/* =========================================================
+   STATUS DA LEITURA
+========================================================= */
+
+function status(
+    texto,
+    classe
+) {
+
+    const elemento =
+        document.getElementById(
+            "ocrStatus"
+        );
+
+
+    elemento.textContent =
+        texto;
+
+
+    elemento.className =
+        "ocr-status" +
+        (
+            classe
+                ? " " + classe
+                : " " +
+                  (
+                      texto
+                          ? ""
+                          : "oculto"
+                  )
+        );
+}
+
+
+/* =========================================================
+   MENSAGENS
+========================================================= */
+
+function msg(
+    texto,
+    classe = ""
+) {
+
+    const elemento =
+        document.getElementById(
+            "mensagem"
+        );
+
+
+    clearTimeout(
+        timerMensagem
+    );
+
+
+    elemento.textContent =
+        texto;
+
+
+    elemento.className =
+        "mensagem mostrar" +
+        (
+            classe
+                ? " " + classe
+                : ""
+        );
+
+
+    timerMensagem =
+        setTimeout(
+            () => {
+
+                elemento.classList.remove(
+                    "mostrar"
+                );
+
+            },
+            4000
+        );
+}
+
+
+/* =========================================================
+   FUNÇÕES AUXILIARES
+========================================================= */
+
+function value(id) {
+
+    return (
+        document
+            .getElementById(id)
+            ?.value ??
+        ""
+    );
+}
+
+
+function setValue(
+    id,
+    valor
+) {
+
+    const elemento =
+        document.getElementById(id);
+
+
+    if (elemento) {
+
+        elemento.value =
+            valor ?? "";
+    }
+}
+
+
+function setText(
     id,
     valor
 ) {
@@ -2447,207 +2095,212 @@ function preencherTexto(
     if (elemento) {
 
         elemento.textContent =
-            valor ??
-            "-";
-
+            valor;
     }
-
 }
 
 
-function preencherCampo(
-    id,
-    valor
-) {
+function texto(id) {
 
-    const campo =
-        document.getElementById(id);
+    const valor =
+        value(id).trim();
 
 
-    if (campo) {
-
-        campo.value =
-            valor ??
-            "";
-
-    }
-
+    return valor || null;
 }
 
 
-function valorCampoId(
-    id
-) {
+function numero(id) {
 
-    const campo =
-        document.getElementById(id);
+    const valor =
+        value(id).trim();
 
 
-    if (!campo) {
+    if (!valor) {
         return null;
     }
 
 
-    const valor =
-        campo.value.trim();
-
-
-    return valor === ""
-        ? null
-        : valor;
-
+    return num(valor);
 }
 
 
-function numeroCampoId(
-    id
-) {
+/*
+ * Converte:
+ *
+ * 37
+ * 37,5
+ * 37.5
+ * 1.234,56
+ *
+ * corretamente para número.
+ */
 
-    const valor =
-        valorCampoId(id);
-
+function num(valor) {
 
     if (
-        valor === null
+        valor == null ||
+        valor === ""
     ) {
 
         return null;
-
     }
 
 
-    const normalizado =
-        valor
-            .replace(",", ".")
-            .replace(/[^\d.-]/g, "");
+    if (
+        typeof valor === "number"
+    ) {
+
+        return Number.isFinite(valor)
+            ? valor
+            : null;
+    }
+
+
+    let texto =
+        String(valor)
+            .replace(
+                /\s/g,
+                ""
+            );
+
+
+    if (
+        texto.includes(",") &&
+        texto.includes(".")
+    ) {
+
+        /*
+         * Exemplo brasileiro:
+         * 1.234,56
+         */
+
+        if (
+            texto.lastIndexOf(",") >
+            texto.lastIndexOf(".")
+        ) {
+
+            texto =
+                texto
+                    .replace(
+                        /\./g,
+                        ""
+                    )
+                    .replace(
+                        ",",
+                        "."
+                    );
+
+        } else {
+
+            /*
+             * Exemplo:
+             * 1,234.56
+             */
+
+            texto =
+                texto.replace(
+                    /,/g,
+                    ""
+                );
+        }
+
+    } else {
+
+        texto =
+            texto.replace(
+                ",",
+                "."
+            );
+    }
 
 
     const numero =
-        Number(
-            normalizado
-        );
+        Number(texto);
 
 
     return Number.isFinite(numero)
         ? numero
         : null;
-
 }
 
 
-function montarPotencia(
-    equipamento
-) {
+/* =========================================================
+   TRATAMENTO DE ERRO
+========================================================= */
 
-    const valores = [];
+function mensagemErro(erro) {
 
-
-    if (
-        equipamento.potencia_kw !==
-        null &&
-        equipamento.potencia_kw !==
-        undefined
-    ) {
-
-        valores.push(
-            equipamento.potencia_kw +
-            " kW"
-        );
-
-    }
-
-
-    if (
-        equipamento.potencia_cv !==
-        null &&
-        equipamento.potencia_cv !==
-        undefined
-    ) {
-
-        valores.push(
-            equipamento.potencia_cv +
-            " CV"
-        );
-
-    }
-
-
-    return valores.length
-        ? valores.join(" / ")
-        : null;
-
+    return (
+        erro?.message ||
+        erro?.error_description ||
+        "Erro desconhecido."
+    );
 }
 
 
-// ============================================================
-// ESCAPAR HTML
-// ============================================================
+/* =========================================================
+   SEGURANÇA PARA HTML
+========================================================= */
 
-function escapeHtml(valor) {
+function esc(valor) {
 
-    if (
-        valor === null ||
-        valor === undefined
-    ) {
-
-        return "";
-
-    }
-
-
-    return String(valor)
-        .replace(
-            /&/g,
+    return String(
+        valor ?? ""
+    )
+        .replaceAll(
+            "&",
             "&amp;"
         )
-        .replace(
-            /</g,
+        .replaceAll(
+            "<",
             "&lt;"
         )
-        .replace(
-            />/g,
+        .replaceAll(
+            ">",
             "&gt;"
         )
-        .replace(
-            /"/g,
+        .replaceAll(
+            '"',
             "&quot;"
         )
-        .replace(
-            /'/g,
+        .replaceAll(
+            "'",
             "&#039;"
         );
-
 }
 
 
-// ============================================================
-// EXPOR FUNÇÕES PARA O HTML
-// ============================================================
-//
-// Caso o seu index.html use onclick="...",
-// mantemos estas funções disponíveis globalmente.
-// ============================================================
+/* =========================================================
+   FUNÇÕES GLOBAIS USADAS PELO HTML
+========================================================= */
 
-window.mostrarTela =
-    mostrarTela;
+window.abrirCadastro =
+    abrirCadastro;
+
+window.abrirConsulta =
+    abrirConsulta;
+
+window.voltarHome =
+    voltarHome;
+
+window.voltarConsulta =
+    voltarConsulta;
 
 window.abrirDetalhes =
     abrirDetalhes;
 
-window.abrirEdicao =
-    abrirEdicao;
+window.ativarEdicao =
+    ativarEdicao;
+
+window.cancelarEdicao =
+    cancelarEdicao;
+
+window.selecionarFotoEdicao =
+    selecionarFotoEdicao;
+
+window.salvarAlteracoes =
+    salvarAlteracoes;
 
 window.excluirEquipamento =
     excluirEquipamento;
-
-window.salvarEquipamento =
-    salvarEquipamento;
-
-window.atualizarEquipamento =
-    atualizarEquipamento;
-
-window.processarPlacaComIA =
-    processarPlacaComIA;
-
-window.atualizarCamposTipo =
-    atualizarCamposTipo;
