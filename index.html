@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Controle de Equipamentos</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <header>
+            <h1>🏭 Controle de Equipamentos</h1>
+            <p>Cadastro de motores e redutores</p>
+        </header>
+
+        <main>
+
+            <div class="card">
+
+                <h2>Novo equipamento</h2>
+
+                <label for="nome">
+                    Nome do equipamento
+                </label>
+
+                <input
+                    type="text"
+                    id="nome"
+                    placeholder="Ex.: Motor Extrator Secador 01"
+                >
+
+                <label for="local">
+                    Local de instalação
+                </label>
+
+                <input
+                    type="text"
+                    id="local"
+                    placeholder="Ex.: Secador"
+                >
+
+                <label for="tipo">
+                    Tipo
+                </label>
+
+                <select id="tipo">
+
+                    <option value="motor">
+                        Motor elétrico
+                    </option>
+
+                    <option value="redutor">
+                        Caixa de redução
+                    </option>
+
+                    <option value="outro">
+                        Outro
+                    </option>
+
+                </select>
+
+                <label for="foto">
+                    Foto da placa
+                </label>
+
+                <input
+                    type="file"
+                    id="foto"
+                    accept="image/*"
+                    capture="environment"
+                >
+
+                <div id="preview"></div>
+
+                <button id="salvar">
+                    SALVAR EQUIPAMENTO
+                </button>
+
+                <div id="mensagem"></div>
+
+            </div>
+
+        </main>
+
+    </div>
+
+    <script type="module" src="app.js"></script>
+
+</body>
+
+</html>
