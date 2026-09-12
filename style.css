@@ -2,6 +2,7 @@
     box-sizing: border-box;
 }
 
+
 body {
     margin: 0;
 
@@ -15,42 +16,112 @@ body {
     color: #222;
 }
 
+
 .container {
-    max-width: 700px;
+    width: 100%;
+
+    max-width: 750px;
 
     margin: 0 auto;
 
-    padding: 20px;
+    padding: 15px;
 }
 
-header {
+
+/* =====================================================
+   CABEÇALHO
+   ===================================================== */
+
+.topo {
     text-align: center;
 
-    margin-bottom: 25px;
+    padding:
+        15px
+        5px
+        20px;
 }
 
-header h1 {
-    margin-bottom: 5px;
+
+.topo h1 {
+    margin: 0 0 6px;
+
+    font-size: 25px;
 }
 
-header p {
+
+.topo p {
+    margin: 0;
+
     color: #666;
 }
+
+
+/* =====================================================
+   MENU
+   ===================================================== */
+
+.menu {
+    display: flex;
+
+    gap: 10px;
+
+    margin-bottom: 15px;
+}
+
+
+.menu-btn {
+    flex: 1;
+
+    border: none;
+
+    border-radius: 8px;
+
+    padding: 13px;
+
+    background: #dfe3e8;
+
+    color: #333;
+
+    font-size: 15px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+}
+
+
+.menu-btn.ativo {
+    background: #1769aa;
+
+    color: white;
+}
+
+
+/* =====================================================
+   CARD
+   ===================================================== */
 
 .card {
     background: white;
 
-    padding: 25px;
+    padding: 22px;
 
     border-radius: 12px;
 
     box-shadow:
-        0 2px 10px rgba(0,0,0,0.08);
+        0 2px 10px
+        rgba(0, 0, 0, 0.08);
 }
+
 
 .card h2 {
     margin-top: 0;
 }
+
+
+/* =====================================================
+   FORMULÁRIO
+   ===================================================== */
 
 label {
     display: block;
@@ -62,25 +133,114 @@ label {
     font-weight: bold;
 }
 
+
 input,
 select {
     width: 100%;
 
     padding: 13px;
 
-    border: 1px solid #ccc;
+    border:
+        1px solid
+        #ccc;
 
     border-radius: 7px;
 
     font-size: 16px;
+
+    background: white;
 }
 
-button {
+
+input:focus,
+select:focus {
+    outline: none;
+
+    border-color: #1769aa;
+}
+
+
+/* =====================================================
+   FOTO
+   ===================================================== */
+
+.camera-input {
+    display: none;
+}
+
+
+.foto-botoes {
+    display: flex;
+
+    gap: 10px;
+
+    margin-top: 10px;
+}
+
+
+.foto-button {
+    flex: 1;
+
+    padding: 15px 10px;
+
+    border: none;
+
+    border-radius: 8px;
+
+    background: #333;
+
+    color: white;
+
+    font-size: 15px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+}
+
+
+.foto-button.secundario {
+    background: #1769aa;
+}
+
+
+.foto-button:active {
+    opacity: 0.8;
+}
+
+
+#preview {
+    margin-top: 15px;
+
+    text-align: center;
+}
+
+
+#preview img {
+    width: 100%;
+
+    max-height: 350px;
+
+    object-fit: contain;
+
+    border-radius: 8px;
+
+    border:
+        1px solid
+        #ddd;
+}
+
+
+/* =====================================================
+   BOTÃO SALVAR
+   ===================================================== */
+
+.salvar-button {
     width: 100%;
 
     margin-top: 25px;
 
-    padding: 15px;
+    padding: 16px;
 
     border: none;
 
@@ -97,23 +257,15 @@ button {
     cursor: pointer;
 }
 
-button:hover {
-    opacity: 0.9;
+
+.salvar-button:disabled {
+    opacity: 0.6;
 }
 
-#preview {
-    margin-top: 15px;
 
-    text-align: center;
-}
-
-#preview img {
-    max-width: 100%;
-
-    max-height: 300px;
-
-    border-radius: 8px;
-}
+/* =====================================================
+   MENSAGEM
+   ===================================================== */
 
 #mensagem {
     margin-top: 15px;
@@ -121,4 +273,263 @@ button:hover {
     text-align: center;
 
     font-weight: bold;
+}
+
+
+/* =====================================================
+   PESQUISA
+   ===================================================== */
+
+.campo-pesquisa {
+    margin-bottom: 12px;
+}
+
+
+/* =====================================================
+   FILTROS
+   ===================================================== */
+
+.filtros {
+    display: flex;
+
+    gap: 7px;
+
+    margin-bottom: 18px;
+}
+
+
+.filtro {
+    flex: 1;
+
+    padding: 9px 5px;
+
+    border:
+        1px solid
+        #ccc;
+
+    border-radius: 7px;
+
+    background: white;
+
+    cursor: pointer;
+}
+
+
+.filtro.ativo {
+    background: #1769aa;
+
+    color: white;
+
+    border-color: #1769aa;
+}
+
+
+/* =====================================================
+   LISTA DE EQUIPAMENTOS
+   ===================================================== */
+
+.equipamento {
+    border:
+        1px solid
+        #ddd;
+
+    border-radius: 9px;
+
+    padding: 15px;
+
+    margin-bottom: 10px;
+
+    cursor: pointer;
+
+    background: white;
+}
+
+
+.equipamento:active {
+    background: #f5f5f5;
+}
+
+
+.equipamento-nome {
+    font-size: 17px;
+
+    font-weight: bold;
+
+    margin-bottom: 7px;
+}
+
+
+.equipamento-info {
+    color: #666;
+
+    font-size: 14px;
+
+    line-height: 1.5;
+}
+
+
+.tipo-badge {
+    display: inline-block;
+
+    margin-top: 8px;
+
+    padding:
+        4px
+        8px;
+
+    border-radius: 5px;
+
+    background: #e9eef3;
+
+    font-size: 12px;
+
+    font-weight: bold;
+}
+
+
+.carregando,
+.sem-resultados {
+    text-align: center;
+
+    padding: 30px 10px;
+
+    color: #666;
+}
+
+
+/* =====================================================
+   DETALHES
+   ===================================================== */
+
+.voltar-button {
+    border: none;
+
+    background: transparent;
+
+    padding: 0;
+
+    margin-bottom: 15px;
+
+    color: #1769aa;
+
+    font-size: 16px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+}
+
+
+.detalhes {
+    display: grid;
+
+    grid-template-columns:
+        1fr 1fr;
+
+    gap: 10px;
+}
+
+
+.detalhe-item {
+    background: #f5f6f7;
+
+    padding: 12px;
+
+    border-radius: 7px;
+}
+
+
+.detalhe-item span {
+    display: block;
+
+    font-size: 12px;
+
+    color: #777;
+
+    margin-bottom: 5px;
+}
+
+
+.detalhe-item strong {
+    font-size: 15px;
+}
+
+
+.detalhe-foto {
+    margin-top: 20px;
+
+    text-align: center;
+}
+
+
+.detalhe-foto img {
+    width: 100%;
+
+    max-height: 450px;
+
+    object-fit: contain;
+
+    border-radius: 8px;
+
+    border:
+        1px solid
+        #ddd;
+}
+
+
+.observacoes {
+    margin-top: 20px;
+
+    padding: 15px;
+
+    background: #f5f6f7;
+
+    border-radius: 8px;
+}
+
+
+.observacoes:empty {
+    display: none;
+}
+
+
+/* =====================================================
+   UTILITÁRIO
+   ===================================================== */
+
+.oculto {
+    display: none;
+}
+
+
+/* =====================================================
+   CELULAR
+   ===================================================== */
+
+@media (max-width: 500px) {
+
+    .container {
+        padding: 10px;
+    }
+
+
+    .card {
+        padding: 18px;
+    }
+
+
+    .topo h1 {
+        font-size: 22px;
+    }
+
+
+    .foto-botoes {
+        flex-direction: column;
+    }
+
+
+    .detalhes {
+        grid-template-columns: 1fr;
+    }
+
 }
